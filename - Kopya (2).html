@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>EKPSS Engelsiz Eğitim Fabrikası v2.0</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Playfair+Display:ital,wght@0,700;1,700&family=Open+Dyslexic&display=swap" rel="stylesheet">
+    <style>
+        :root { 
+            --p: #4f46e5; 
+            --s: #10b981; 
+            --bg: #0f172a; 
+            --dark: #1e293b; 
+            --text-light: #f8fafc;
+        }
+
+        .dyslexia-mode { font-family: 'OpenDyslexic', sans-serif !important; }
+
+        body { 
+            font-family: 'Montserrat', sans-serif; 
+            background: var(--bg); 
+            margin: 0; 
+            display: flex; 
+            height: 100vh; 
+            overflow: hidden; 
+            color: var(--text-light);
+        }
+
+        /* SOL PANEL */
+        .sidebar { 
+            width: 360px; 
+            background: var(--dark); 
+            padding: 20px; 
+            display: flex; 
+            flex-direction: column; 
+            box-shadow: 4px 0 15px rgba(0,0,0,0.5); 
+            z-index: 10;
+        }
+        
+        .sidebar h2 { font-size: 1.4rem; color: var(--s); border-bottom: 2px solid #334155; padding-bottom: 10px; margin-bottom: 10px; }
+        
+        select, textarea { 
+            width: 100%;
+            background: #0f172a; 
+            color: #e2e8f0; 
+            border: 1px solid #475569; 
+            border-radius: 8px; 
+            padding: 12px; 
+            font-size: 14px; 
+            outline: none; 
+            box-sizing: border-box;
+        }
+
+        textarea { flex: 1; resize: none; margin-top: 10px; line-height: 1.5; }
+        
+        .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 15px; }
+        
+        .btn { 
+            padding: 10px; 
+            border: none; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            font-size: 10px; 
+            text-transform: uppercase; 
+            transition: 0.3s; 
+        }
+        
+        .btn-blue { background: var(--p); color: white; }
+        .btn-green { background: var(--s); color: white; }
+        .btn-red { background: #ef4444; color: white; }
+        .btn-outline { background: transparent; border: 1px solid #64748b; color: white; }
+        .btn-blue:hover, .btn-green:hover { opacity: 0.8; transform: translateY(-2px); }
+
+        /* SAĞ PANEL */
+        .preview-area { 
+            flex: 1; 
+            padding: 20px; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center;
+            background: #020617; 
+            position: relative;
+        }
+
+        /* TAHTA MODU */
+        .whiteboard-mode {
+            width: 90%; height: 80%; background: #f8fafc; border: 12px solid #475569;
+            border-radius: 10px; display: none; flex-direction: column;
+            align-items: center; justify-content: center; padding: 40px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5); position: relative;
+        }
+        .whiteboard-mode.active { display: flex; }
+        #board-text { color: #1e293b; font-size: 2.5rem; font-weight: 700; text-align: center; line-height: 1.4; }
+
+        /* KİTAP MODU */
+        .book-mode {
+            width: 80%; height: 85%; background: #fff; color: #334155;
+            padding: 50px; border-radius: 5px; display: none; overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        .book-mode.active { display: block; }
+        .book-title { font-family: 'Playfair Display', serif; font-size: 2.2rem; border-bottom: 4px solid var(--p); margin-bottom: 20px; }
+        .book-content { font-size: 1.2rem; line-height: 1.8; text-align: justify; white-space: pre-wrap; }
+
+        #teacher { position: absolute; bottom: 20px; right: 40px; font-size: 100px; z-index: 5; display: none; }
+        
+        .nav-hint { position: absolute; bottom: 10px; color: #475569; font-size: 12px; }
+    </style>
+</head>
+<body id="app-body">
+
+    <aside class="sidebar">
+        <h2>EKPSS FABRİKASI</h2>
+        
+        <label style="font-size: 12px; color: var(--s);">Ders Seçimi:</label>
+        <select id="ders-select" onchange="loadPresetContent()">
+            <option value="TÜRKÇE">EKPSS Türkçe</option>
+            <option value="MATEMATİK">EKPSS Matematik</option>
+            <option value="TARİH">EKPSS Tarih</option>
+            <option value="COĞRAFYA">EKPSS Coğrafya</option>
+            <option value="VATANDAŞLIK">EKPSS Vatandaşlık</option>
+            <option value="GÜNCEL">EKPSS Güncel Bilgiler</option>
+        </select>
+
+        <textarea id="raw-input" placeholder="Ders notlarını buraya girin...">Cümlede anlam, kelimelerin bir araya gelerek oluşturduğu yargıdır.
+Öznel anlatım, kişisel görüş içerir.
+Nesnel anlatım, kanıtlanabilir bilgilerden oluşur.
+Başarılar dilerim!</textarea>
+        
+        <div class="action-grid">
+            <button class="btn btn-blue" onclick="renderBoard()">👨‍🏫 TAHTA MODU</button>
+            <button class="btn btn-blue" onclick="renderBook()">📚 KİTAP MODU</button>
+            <button class="btn btn-green" onclick="speakAll()">🔊 TAMAMINI OKU</button>
+            <button class="btn btn-red" onclick="startRec()">🔴 VİDEO KAYDET</button>
+            <button class="btn btn-outline" onclick="toggleDyslexia()" style="grid-column: span 2;">🅰️ DİSLEKSİ FONTU</button>
+        </div>
+        <p id="status" style="font-size: 11px; margin-top: 15px; color: var(--s); text-align: center;"></p>
+    </aside>
+
+    <main class="preview-area">
+        <div id="whiteboard" class="whiteboard-mode active">
+            <div id="board-text">Hazırsanız Başlayalım...</div>
+            <div class="nav-hint">İlerlemek için Sağ Ok (→), Geri gitmek için Sol Ok (←) tuşlarını kullanın.</div>
+        </div>
+
+        <div id="book" class="book-mode">
+            <div class="book-title" id="book-title">Ders Başlığı</div>
+            <div class="book-content" id="book-content">...</div>
+        </div>
+
+        <div id="teacher">👨‍🏫</div>
+    </main>
+
+<script>
+    const presets = {
+        "TÜRKÇE": "Sözcükte anlam, dilin en küçük birimi olan kelimelerin taşıdığı manadır.\nGerçek anlam, bir kelimenin akla gelen ilk anlamıdır.\nMecaz anlam, kelimenin gerçek anlamından tamamen uzaklaşmasıdır.\nAtasözleri ve deyimler dilimizin zenginliğidir.",
+        "MATEMATİK": "Sayı kümeleri; Doğal sayılar, Tam sayılar ve Rasyonel sayılar olarak ayrılır.\nİşlem önceliğinde önce parantez içi, sonra çarpma ve bölme yapılır.\nDenklemlerde bilinmeyeni yalnız bırakmak temel kuraldır.\nGeometride üçgenin iç açıları toplamı 180 derecedir.",
+        "TARİH": "İslamiyet Öncesi Türk Tarihi'nde ilk devlet Asya Hun Devleti'dir.\nOsmanlı Devleti 1299 yılında Söğüt ve Domaniç civarında kurulmuştur.\nKurtuluş Savaşı, Atatürk'ün Samsun'a çıkışıyla başlamıştır.\n13 Ekim 1923'te Ankara başkent ilan edilmiştir.",
+        "COĞRAFYA": "Türkiye, 36-42 Kuzey paralelleri ile 26-45 Doğu meridyenleri arasındadır.\nÜlkemizin üç tarafı denizlerle çevrili bir yarımadadır.\nEngebeli arazisi nedeniyle Türkiye'de iklim çeşitliliği fazladır.\nKaradeniz iklimi her mevsim yağışlıdır.",
+        "VATANDAŞLIK": "Hukukun dalları Özel Hukuk ve Kamu Hukuku olarak ikiye ayrılır.\n1982 Anayasası şu an yürürlükte olan temel kanunumuzdur.\nMeclis (TBMM) yasama görevini yerine getirir.\nCumhurbaşkanı yürütmenin başıdır.",
+        "GÜNCEL": "2024 yılı verilerine göre güncel gelişmeleri takip etmek sınavda önemlidir.\nUluslararası kuruluşlar ve Türkiye'nin üyelikleri sıkça sorulur.\nKültürel miras alanlarımız UNESCO listesinde yer alır.\nSon yayınlanan resmi verileri (TÜİK vb.) incelemeyi unutmayın."
+    };
+
+    function loadPresetContent() {
+        const selected = document.getElementById('ders-select').value;
+        document.getElementById('raw-input').value = presets[selected];
+    }
+
+    let lines = [];
+    let current = 0;
+    let recorder;
+    let chunks = [];
+
+    function clearActive() {
+        document.getElementById('whiteboard').classList.remove('active');
+        document.getElementById('book').classList.remove('active');
+        document.getElementById('teacher').style.display = "none";
+        window.speechSynthesis.cancel();
+    }
+
+    function renderBoard() {
+        clearActive();
+        const text = document.getElementById('raw-input').value;
+        lines = text.split('\n').filter(l => l.trim() !== "");
+        if(lines.length === 0) return;
+        
+        document.getElementById('whiteboard').classList.add('active');
+        document.getElementById('teacher').style.display = "block";
+        current = 0;
+        updateBoard();
+    }
+
+    function updateBoard() {
+        const board = document.getElementById('board-text');
+        board.innerText = lines[current];
+        
+        const utter = new SpeechSynthesisUtterance(lines[current]);
+        utter.lang = 'tr-TR';
+        utter.rate = 0.9;
+        window.speechSynthesis.speak(utter);
+    }
+
+    function renderBook() {
+        clearActive();
+        const text = document.getElementById('raw-input').value;
+        document.getElementById('book').classList.add('active');
+        document.getElementById('book-title').innerText = document.getElementById('ders-select').options[document.getElementById('ders-select').selectedIndex].text;
+        document.getElementById('book-content').innerText = text;
+        document.getElementById('status').innerText = "📚 Kitap formatı hazır.";
+    }
+
+    window.addEventListener('keydown', (e) => {
+        if(!document.getElementById('whiteboard').classList.contains('active')) return;
+        if(e.key === "ArrowRight" && current < lines.length - 1) { current++; updateBoard(); }
+        if(e.key === "ArrowLeft" && current > 0) { current--; updateBoard(); }
+    });
+
+    function toggleDyslexia() {
+        document.getElementById('app-body').classList.toggle('dyslexia-mode');
+    }
+
+    function speakAll() {
+        window.speechSynthesis.cancel();
+        const text = document.getElementById('raw-input').value;
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.lang = 'tr-TR';
+        utter.rate = 0.95;
+        window.speechSynthesis.speak(utter);
+    }
+
+    async function startRec() {
+        try {
+            const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+            recorder = new MediaRecorder(stream);
+            chunks = [];
+            recorder.ondataavailable = e => chunks.push(e.data);
+            recorder.onstop = () => {
+                const blob = new Blob(chunks, { type: 'video/webm' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = 'EKPSS_Ders_Videosu.webm'; a.click();
+                document.getElementById('status').innerText = "✅ Video İndirildi.";
+            };
+            recorder.start();
+            document.getElementById('status').innerText = "🔴 KAYIT YAPILIYOR...";
+            renderBoard();
+        } catch(err) {
+            alert("Ekran kaydı hatası.");
+        }
+    }
+</script>
+</body>
+</html>
